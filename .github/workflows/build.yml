@@ -1,0 +1,109 @@
+name: Mango iOS Build
+
+on:
+  push:
+    branches: [ master, mango/ios ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: xcode-27
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: '0'
+
+      - name: Diagnostics
+        run: |
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          python3 --version
+
+      - name: Create canonical source directory
+        run: |
+          set -x
+          sudo mkdir -p /Users/Shared
+          cp -R "$GITHUB_WORKSPACE" /Users/Shared/
+          mv "/Users/Shared/$(basename "$GITHUB_WORKSPACE")" /Users/Shared/telegram-ios
+
+      - name: Generate Mango configuration
+        working-directory: /Users/Shared/telegram-ios
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+        run: |
+          python3 - build-system/appstore-configuration.json <<'PY'
+          import json, os, sys
+          cfg = json.load(open(sys.argv[1]))
+          cfg["bundle_id"] = "app.mango.im.ios"
+          cfg["api_id"] = os.environ["API_ID"]
+          cfg["api_hash"] = os.environ["API_HASH"]
+          cfg["enable_siri"] = False
+          cfg["enable_icloud"] = False
+          with open("build-system/mango-configuration.json", "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("wrote build-system/mango-configuration.json")
+          PY
+
+      - name: Regenerate fake provisioning profiles
+        working-directory: /Users/Shared/telegram-ios
+        run: |
+          python3 build-system/regenerate_fake_profiles.py
+
+      - name: Build the App (unsigned)
+        working-directory: /Users/Shared/telegram-ios
+        run: |
+          set -x
+
+          SOURCE_DIR=/Users/Shared/telegram-ios
+          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
+
+          cd "$SOURCE_DIR"
+
+          BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
+
+          APP_VERSION="$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')"
+          COMMIT_COUNT="$(git rev-list --count HEAD)"
+          BUILD_NUMBER="$((COMMIT_COUNT + BUILD_NUMBER_OFFSET))"
+
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          python3 -u build-system/Make/Make.py \
+            --bazelUserRoot="$BAZEL_USER_ROOT" \
+            build \
+            --configurationPath="build-system/mango-configuration.json" \
+            --codesigningInformationPath=build-system/fake-codesigning \
+            --configuration=release_arm64 \
+            --buildNumber="$BUILD_NUMBER"
+
+          OUTPUT_PATH="build/artifacts"
+          rm -rf "$OUTPUT_PATH"
+          mkdir -p "$OUTPUT_PATH"
+
+          IPA_PATH="bazel-bin/Telegram/Telegram.ipa"
+          if [[ ! -f "$IPA_PATH" ]]; then
+            IPA_PATH="$(find -L bazel-out -name 'Telegram.ipa' -type f 2>/dev/null | head -n 1)"
+          fi
+
+          echo "Resolved IPA path: $IPA_PATH"
+          if [[ -z "$IPA_PATH" ]] || [[ ! -f "$IPA_PATH" ]]; then
+            echo "ERROR: Telegram.ipa not found" >&2
+            find -L bazel-out -name '*.ipa' 2>/dev/null | head -n 50 >&2
+            ls -la bazel-bin/Telegram/ 2>/dev/null >&2
+            exit 1
+          fi
+
+          cp "$IPA_PATH" "$OUTPUT_PATH/"
+          ls -la "$OUTPUT_PATH"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mango-unsigned-ipa
+          path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+          if-no-files-found: error
