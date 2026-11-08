@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 internal import TelegramApi
+import MangoSettings
 
 private class AdMessagesHistoryContextImpl {
     final class CachedMessage: Equatable, Codable {
@@ -635,16 +636,27 @@ public class AdMessagesHistoryContext {
     public let messageId: EngineMessage.Id?
     
     public var state: Signal<(interPostInterval: Int32?, messages: [Message], startDelay: Int32?, betweenDelay: Int32?), NoError> {
-        return Signal { subscriber in
+        return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
-            
-            self.impl.with { impl in
+
+            let hideAds: Bool
+            if let strongSelf = self {
+                hideAds = MangoAdBlock.shouldHideAds(peerId: strongSelf.peerId.id._internalGetInt64Value())
+            } else {
+                hideAds = false
+            }
+
+            self?.impl.with { impl in
                 let stateDisposable = impl.state.get().start(next: { state in
-                    subscriber.putNext((state.interPostInterval, state.messages, state.startDelay, state.betweenDelay))
+                    if hideAds {
+                        subscriber.putNext((state.interPostInterval, [], state.startDelay, state.betweenDelay))
+                    } else {
+                        subscriber.putNext((state.interPostInterval, state.messages, state.startDelay, state.betweenDelay))
+                    }
                 })
                 disposable.set(stateDisposable)
             }
-            
+
             return disposable
         }
     }

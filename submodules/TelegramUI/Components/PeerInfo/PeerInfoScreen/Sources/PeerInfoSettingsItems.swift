@@ -262,6 +262,9 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_ChatSettings, icon: PresentationResourcesSettings.dataAndStorage, action: {
         interaction.openSettings(.dataAndStorage)
     }))
+    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 5, text: "芒果设置", icon: PresentationResourcesSettings.premium, action: {
+        interaction.openSettings(.mangoSettings)
+    }))
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 3, text: presentationData.strings.Settings_Appearance, icon: PresentationResourcesSettings.appearance, action: {
         interaction.openSettings(.appearance)
     }))

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import TelegramBaseController
 import OverlayStatusController
 import AccountContext
+import MangoSettings
 import AlertUI
 import PresentationDataUtils
 import UndoUI
@@ -7374,7 +7375,7 @@ private final class ChatListLocationContext {
                 titleContent = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
             }
             
-            if titleContent.hasProxy {
+            if titleContent.hasProxy && !MangoProxyPreferences.hideIcon {
                 let proxyStatus: ChatTitleProxyStatus
                 if titleContent.connectsViaProxy {
                     proxyStatus = titleContent.activity ? .connecting : .connected

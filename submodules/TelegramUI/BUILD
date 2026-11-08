@@ -1,4 +1,4 @@
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+﻿load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 load(
     "@build_configuration//:variables.bzl",
@@ -76,6 +76,7 @@ swift_library(
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/MangoSettings:MangoSettings",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/lottie-ios:Lottie",
         "//submodules/FFMpegBinding:FFMpegBinding",

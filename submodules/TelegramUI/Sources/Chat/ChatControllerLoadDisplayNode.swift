@@ -58,6 +58,7 @@ import Markdown
 import TelegramPermissionsUI
 import Speak
 import TranslateUI
+import MangoSettings
 import TextProcessingScreen
 import UniversalMediaPlayer
 import WallpaperBackgroundNode
@@ -996,6 +997,19 @@ extension ChatControllerImpl {
         
         self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone in
             guard let strongSelf = self else {
+                return
+            }
+
+            if scheduleTime == nil && !postpone && MangoSendConfirmationGuard.shouldConfirm() {
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                let alertController = textAlertController(context: strongSelf.context, title: nil, text: "确认发送这条消息？", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: "发送", action: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    MangoSendConfirmationGuard.bypassNextSend()
+                    strongSelf.chatDisplayNode.sendMessages(messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone)
+                })])
+                strongSelf.present(alertController, in: .window(.root))
                 return
             }
 

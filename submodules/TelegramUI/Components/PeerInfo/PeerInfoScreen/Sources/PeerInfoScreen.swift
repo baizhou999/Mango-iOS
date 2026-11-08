@@ -187,6 +187,7 @@ enum PeerInfoSettingsSection {
     case username
     case addAccount
     case logout
+    case mangoSettings
     case rememberPassword
     case emojiStatus
     case profileColor

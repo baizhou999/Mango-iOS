@@ -10,6 +10,7 @@ import LegacyComponents
 import DeviceAccess
 import TelegramUpdateUI
 import AccountContext
+import MangoSettings
 import AlertUI
 import PresentationDataUtils
 import TelegramPermissions
@@ -281,6 +282,8 @@ final class AuthorizedApplicationContext {
             }
         }))
         
+        MangoAutoCleanup.runIfNeeded(context: context)
+
         self.inAppNotificationSettingsDisposable.set(((context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])) |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) {
@@ -343,8 +346,16 @@ final class AuthorizedApplicationContext {
                             chatIsVisible = true
                         }
                     }
-                    
-                    if !notify {
+
+                    let mangoKeywordHit: Bool = {
+                        let mangoSettings = MangoSettingsStore.shared
+                        guard mangoSettings.keywordAlertsEnabled, mangoSettings.alertMutedChatsOnKeywordMatch else {
+                            return false
+                        }
+                        return MangoKeywordMatcher.firstMatch(in: firstMessage.text, keywords: mangoSettings.keywords) != nil
+                    }()
+
+                    if !notify && !mangoKeywordHit {
                         chatIsVisible = true
                     }
                     
@@ -383,7 +394,7 @@ final class AuthorizedApplicationContext {
                                     return false
                                 }
                             })
-                            if !isMuted {
+                            if !isMuted || mangoKeywordHit {
                                 if firstMessage.id.peerId == context.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
                                 } else {
                                     if inAppNotificationSettings.playSounds {
