@@ -11,7 +11,7 @@ import UndoUI
 import MangoSettings
 
 private final class MangoSettingsControllerArguments {
-    let update: (inout MangoSettings.MangoSettings) -> Void
+    let update: (inout MangoSettings) -> Void
     let updateSearch: (String) -> Void
     let updateKeywordsText: (String) -> Void
     let updateWhitelistText: (String) -> Void
@@ -19,7 +19,7 @@ private final class MangoSettingsControllerArguments {
     let openProxySettings: () -> Void
 
     init(
-        update: @escaping (inout MangoSettings.MangoSettings) -> Void,
+        update: @escaping (inout MangoSettings) -> Void,
         updateSearch: @escaping (String) -> Void,
         updateKeywordsText: @escaping (String) -> Void,
         updateWhitelistText: @escaping (String) -> Void,
@@ -211,7 +211,7 @@ private enum MangoSettingsEntry: ItemListNodeEntry {
 }
 
 private func mangoSettingsEntries(
-    settings: MangoSettings.MangoSettings,
+    settings: MangoSettings,
     searchText: String,
     keywordsText: String,
     whitelistText: String
