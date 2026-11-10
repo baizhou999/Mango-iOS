@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - 芒果设置数据模型
 
-public struct MangoSettings: Codable, Equatable {
+public struct MangoSettingsState: Codable, Equatable {
     // 关键词提醒
     public var keywordAlertsEnabled: Bool
     public var keywords: [String]
@@ -63,18 +63,18 @@ public enum MangoSettingsStore {
         return UserDefaults(suiteName: suiteName) ?? .standard
     }
 
-    public static func load() -> MangoSettings {
+    public static func load() -> MangoSettingsState {
         guard let data = defaults.data(forKey: storageKey) else {
-            return MangoSettings()
+            return MangoSettingsState()
         }
         do {
-            return try JSONDecoder().decode(MangoSettings.self, from: data)
+            return try JSONDecoder().decode(MangoSettingsState.self, from: data)
         } catch {
-            return MangoSettings()
+            return MangoSettingsState()
         }
     }
 
-    public static func save(_ settings: MangoSettings) {
+    public static func save(_ settings: MangoSettingsState) {
         do {
             let data = try JSONEncoder().encode(settings)
             defaults.set(data, forKey: storageKey)
@@ -83,11 +83,11 @@ public enum MangoSettingsStore {
     }
 
     /// 每次访问都从磁盘读取，保证各进程（App / 扩展）拿到最新值
-    public static var shared: MangoSettings {
+    public static var shared: MangoSettingsState {
         return load()
     }
 
-    public static func update(_ transform: (inout MangoSettings) -> Void) {
+    public static func update(_ transform: (inout MangoSettingsState) -> Void) {
         var settings = load()
         transform(&settings)
         save(settings)
