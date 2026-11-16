@@ -10,126 +10,98 @@ import AccountContext
 import UndoUI
 import MangoSettings
 
+private enum MangoTextInputField: String {
+    case keywords
+    case adWhitelist
+    case customDownloadPath
+    case inputBarText
+    case dialogsTitleText
+    case appIdentityName
+    case autoReplyAnyMessageText
+    case proxySubscriptionSource
+    case keywordFilterKeywords
+    case keywordFilterWhitelist
+    case localPremiumEmoji
+    case customStarBalance
+    case stickerMessageSize
+    case messageTextSize
+    case downloadSpeedBoost
+    case uploadSpeedBoost
+    case autoCleanupIntervalDays
+}
+
+private enum MangoSettingsAction {
+    case clearCacheNow
+    case openProxySettings
+}
+
 private final class MangoSettingsControllerArguments {
     let update: ((inout MangoSettingsState) -> Void) -> Void
     let updateSearch: (String) -> Void
-    let updateKeywordsText: (String) -> Void
-    let updateWhitelistText: (String) -> Void
-    let clearCacheNow: () -> Void
-    let openProxySettings: () -> Void
+    let updateText: (MangoTextInputField, String) -> Void
+    let performAction: (MangoSettingsAction) -> Void
 
     init(
         update: @escaping ((inout MangoSettingsState) -> Void) -> Void,
         updateSearch: @escaping (String) -> Void,
-        updateKeywordsText: @escaping (String) -> Void,
-        updateWhitelistText: @escaping (String) -> Void,
-        clearCacheNow: @escaping () -> Void,
-        openProxySettings: @escaping () -> Void
+        updateText: @escaping (MangoTextInputField, String) -> Void,
+        performAction: @escaping (MangoSettingsAction) -> Void
     ) {
         self.update = update
         self.updateSearch = updateSearch
-        self.updateKeywordsText = updateKeywordsText
-        self.updateWhitelistText = updateWhitelistText
-        self.clearCacheNow = clearCacheNow
-        self.openProxySettings = openProxySettings
+        self.updateText = updateText
+        self.performAction = performAction
     }
 }
 
 private enum MangoSettingsSection: Int32 {
-    case search
-    case messages
-    case ads
-    case media
-    case proxy
-    case about
+    case search = 0
+    case chat = 1
+    case privacy = 2
+    case keywordFilter = 3
+    case autoReply = 4
+    case media = 5
+    case automation = 6
+    case appearance = 7
+    case tools = 8
+    case modules = 9
+    case about = 10
 }
 
 private enum MangoSettingsEntry: ItemListNodeEntry {
     case searchInput(String)
+    case header(Int32, MangoSettingsSection, String)
+    case switchRow(Int32, MangoSettingsSection, String, Bool, WritableKeyPath<MangoSettingsState, Bool>)
+    case textRow(Int32, MangoSettingsSection, String, String, String, MangoTextInputField)
+    case actionRow(Int32, MangoSettingsSection, String, MangoSettingsAction)
+    case footer(Int32, MangoSettingsSection, String)
+}
 
-    case messagesHeader
-    case keywordAlertsEnabled(Bool)
-    case keywordsInput(String)
-    case keywordMutedEnabled(Bool)
-    case sendConfirmationEnabled(Bool)
-    case antiRecallEnabled(Bool)
-    case messagesFooter
-
-    case adsHeader
-    case adBlockEnabled(Bool)
-    case adWhitelistInput(String)
-    case adsFooter
-
-    case mediaHeader
-    case autoCleanupEnabled(Bool)
-    case clearCacheNow
-    case mediaFooter
-
-    case proxyHeader
-    case hideProxyIcon(Bool)
-    case openProxySettings
-
-    case aboutHeader
-    case aboutText
-
+extension MangoSettingsEntry {
     var section: ItemListSectionId {
         switch self {
         case .searchInput:
             return MangoSettingsSection.search.rawValue
-        case .messagesHeader, .keywordAlertsEnabled, .keywordsInput, .keywordMutedEnabled, .sendConfirmationEnabled, .antiRecallEnabled, .messagesFooter:
-            return MangoSettingsSection.messages.rawValue
-        case .adsHeader, .adBlockEnabled, .adWhitelistInput, .adsFooter:
-            return MangoSettingsSection.ads.rawValue
-        case .mediaHeader, .autoCleanupEnabled, .clearCacheNow, .mediaFooter:
-            return MangoSettingsSection.media.rawValue
-        case .proxyHeader, .hideProxyIcon, .openProxySettings:
-            return MangoSettingsSection.proxy.rawValue
-        case .aboutHeader, .aboutText:
-            return MangoSettingsSection.about.rawValue
+        case let .header(_, s, _), let .switchRow(_, s, _, _, _), let .textRow(_, s, _, _, _, _), let .actionRow(_, s, _, _), let .footer(_, s, _):
+            return s.rawValue
         }
     }
 
     var stableId: Int32 {
         switch self {
-        case .searchInput: return 0
-        case .messagesHeader: return 1
-        case .keywordAlertsEnabled: return 2
-        case .keywordsInput: return 3
-        case .keywordMutedEnabled: return 4
-        case .sendConfirmationEnabled: return 5
-        case .antiRecallEnabled: return 6
-        case .messagesFooter: return 7
-        case .adsHeader: return 8
-        case .adBlockEnabled: return 9
-        case .adWhitelistInput: return 10
-        case .adsFooter: return 11
-        case .mediaHeader: return 12
-        case .autoCleanupEnabled: return 13
-        case .clearCacheNow: return 14
-        case .mediaFooter: return 15
-        case .proxyHeader: return 16
-        case .hideProxyIcon: return 17
-        case .openProxySettings: return 18
-        case .aboutHeader: return 19
-        case .aboutText: return 20
+        case .searchInput:
+            return 0
+        case let .header(id, _, _), let .switchRow(id, _, _, _, _), let .textRow(id, _, _, _, _, _), let .actionRow(id, _, _, _), let .footer(id, _, _):
+            return id
         }
     }
 
-    /// 设置搜索：返回该条目参与搜索的标题文本（空串表示不参与）
     var searchableTitle: String {
         switch self {
-        case .keywordAlertsEnabled: return "关键词提醒"
-        case .keywordsInput: return "关键词列表"
-        case .keywordMutedEnabled: return "静音会话关键词提醒"
-        case .sendConfirmationEnabled: return "发送前确认"
-        case .antiRecallEnabled: return "防撤回"
-        case .adBlockEnabled: return "广告屏蔽"
-        case .adWhitelistInput: return "广告白名单"
-        case .autoCleanupEnabled: return "自动清理缓存"
-        case .clearCacheNow: return "立即清理缓存"
-        case .hideProxyIcon: return "隐藏代理图标"
-        case .openProxySettings: return "代理设置"
-        default: return ""
+        case let .switchRow(_, _, title, _, _), let .textRow(_, _, title, _, _, _), let .actionRow(_, _, title, _):
+            return title
+        default:
+            return ""
         }
     }
 
@@ -144,77 +116,101 @@ private enum MangoSettingsEntry: ItemListNodeEntry {
             return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: text, placeholder: "搜索芒果设置", maxLength: nil, sectionId: self.section, style: .blocks, minimalHeight: 40.0, textUpdated: { value in
                 arguments.updateSearch(value)
             }, updatedFocus: nil, tag: nil, action: nil)
-        case .messagesHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "消息增强", sectionId: self.section)
-        case let .keywordAlertsEnabled(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "关键词提醒", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.keywordAlertsEnabled = value }
+        case let .header(_, _, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .switchRow(_, _, title, value, keyPath):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.update { state in
+                    state[keyPath: keyPath] = value
+                }
             })
-        case let .keywordsInput(text):
-            return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: text, placeholder: "关键词，用逗号分隔", maxLength: nil, sectionId: self.section, style: .blocks, minimalHeight: 60.0, textUpdated: { value in
-                arguments.updateKeywordsText(value)
+        case let .textRow(_, _, _, placeholder, text, field):
+            return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, minimalHeight: 40.0, textUpdated: { value in
+                arguments.updateText(field, value)
             }, updatedFocus: nil, tag: nil, action: nil)
-        case let .keywordMutedEnabled(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "静音会话也提醒", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.alertMutedChatsOnKeywordMatch = value }
+        case let .actionRow(_, _, title, action):
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                arguments.performAction(action)
             })
-        case let .sendConfirmationEnabled(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "发送前确认", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.sendConfirmationEnabled = value }
-            })
-        case let .antiRecallEnabled(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "防撤回", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.antiRecallEnabled = value }
-            })
-        case .messagesFooter:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("开启关键词提醒后，应用内收到含关键词的消息会强提醒。防撤回开启后，对方撤回的消息仍保留在本机。"), sectionId: self.section)
-        case .adsHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "广告屏蔽", sectionId: self.section)
-        case let .adBlockEnabled(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "屏蔽赞助消息", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.adBlockEnabled = value }
-            })
-        case let .adWhitelistInput(text):
-            return ItemListMultilineInputItem(presentationData: presentationData, systemStyle: .glass, text: text, placeholder: "白名单频道 ID，用逗号分隔", maxLength: nil, sectionId: self.section, style: .blocks, minimalHeight: 60.0, textUpdated: { value in
-                arguments.updateWhitelistText(value)
-            }, updatedFocus: nil, tag: nil, action: nil)
-        case .adsFooter:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("开启后隐藏频道内的赞助广告消息；白名单中的频道不受影响（填数字 ID）。"), sectionId: self.section)
-        case .mediaHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "媒体清理", sectionId: self.section)
-        case let .autoCleanupEnabled(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "自动清理缓存（每 7 天）", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.autoCleanupEnabled = value }
-            })
-        case .clearCacheNow:
-            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "立即清理缓存", kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
-                arguments.clearCacheNow()
-            })
-        case .mediaFooter:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("自动清理会在应用启动时检查并清除超过 7 天未清理的媒体缓存，不影响聊天记录。"), sectionId: self.section)
-        case .proxyHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "网络与代理", sectionId: self.section)
-        case let .hideProxyIcon(value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: "隐藏代理图标", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.update { $0.hideProxyIcon = value }
-            })
-        case .openProxySettings:
-            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: "打开代理设置", kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
-                arguments.openProxySettings()
-            })
-        case .aboutHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "关于", sectionId: self.section)
-        case .aboutText:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("芒果客户端 iOS 版 · 基于 Telegram 源码\n功能与 Android 芒果客户端对齐"), sectionId: self.section)
+        case let .footer(_, _, text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
+    }
+}
+private func splitMangoList(_ value: String) -> [String] {
+    return value.components(separatedBy: CharacterSet(charactersIn: ",，\n"))
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+}
+
+private func initialMangoTextValues(_ settings: MangoSettingsState) -> [MangoTextInputField: String] {
+    var values: [MangoTextInputField: String] = [:]
+    values[.keywords] = settings.keywords.joined(separator: ", ")
+    values[.adWhitelist] = settings.adBlockWhitelistPeerIds.map { String($0) }.joined(separator: ", ")
+    values[.customDownloadPath] = settings.customDownloadPath
+    values[.inputBarText] = settings.inputBarText
+    values[.dialogsTitleText] = settings.dialogsTitleText
+    values[.appIdentityName] = settings.appIdentityName
+    values[.autoReplyAnyMessageText] = settings.autoReplyAnyMessageText
+    values[.proxySubscriptionSource] = settings.proxySubscriptionSource
+    values[.keywordFilterKeywords] = settings.keywordFilterKeywords.joined(separator: ", ")
+    values[.keywordFilterWhitelist] = settings.keywordFilterWhitelist.joined(separator: ", ")
+    values[.localPremiumEmoji] = settings.localPremiumEmoji
+    values[.customStarBalance] = settings.customStarBalance == -1 ? "" : String(settings.customStarBalance)
+    values[.stickerMessageSize] = String(settings.stickerMessageSize)
+    values[.messageTextSize] = settings.messageTextSize == 0 ? "" : String(settings.messageTextSize)
+    values[.downloadSpeedBoost] = settings.downloadSpeedBoost == 0 ? "" : String(settings.downloadSpeedBoost)
+    values[.uploadSpeedBoost] = settings.uploadSpeedBoost == 0 ? "" : String(settings.uploadSpeedBoost)
+    values[.autoCleanupIntervalDays] = String(settings.autoCleanupIntervalDays)
+    return values
+}
+
+private func applyMangoTextUpdate(_ field: MangoTextInputField, _ value: String) {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    switch field {
+    case .keywords:
+        let list = splitMangoList(value)
+        MangoSettingsStore.update { $0.keywords = list }
+    case .adWhitelist:
+        let ids = splitMangoList(value).compactMap { Int64($0) }
+        MangoSettingsStore.update { $0.adBlockWhitelistPeerIds = ids }
+    case .keywordFilterKeywords:
+        MangoSettingsStore.update { $0.keywordFilterKeywords = splitMangoList(value) }
+    case .keywordFilterWhitelist:
+        MangoSettingsStore.update { $0.keywordFilterWhitelist = splitMangoList(value) }
+    case .customDownloadPath:
+        MangoSettingsStore.update { $0.customDownloadPath = trimmed }
+    case .inputBarText:
+        MangoSettingsStore.update { $0.inputBarText = trimmed }
+    case .dialogsTitleText:
+        MangoSettingsStore.update { $0.dialogsTitleText = trimmed }
+    case .appIdentityName:
+        MangoSettingsStore.update { $0.appIdentityName = trimmed }
+    case .autoReplyAnyMessageText:
+        MangoSettingsStore.update { $0.autoReplyAnyMessageText = trimmed }
+    case .proxySubscriptionSource:
+        MangoSettingsStore.update { $0.proxySubscriptionSource = trimmed }
+    case .localPremiumEmoji:
+        MangoSettingsStore.update { $0.localPremiumEmoji = trimmed }
+    case .customStarBalance:
+        MangoSettingsStore.update { $0.customStarBalance = Int(trimmed) ?? -1 }
+    case .stickerMessageSize:
+        MangoSettingsStore.update { $0.stickerMessageSize = Int(trimmed) ?? 100 }
+    case .messageTextSize:
+        MangoSettingsStore.update { $0.messageTextSize = Int(trimmed) ?? 0 }
+    case .downloadSpeedBoost:
+        MangoSettingsStore.update { $0.downloadSpeedBoost = Int(trimmed) ?? 0 }
+    case .uploadSpeedBoost:
+        MangoSettingsStore.update { $0.uploadSpeedBoost = Int(trimmed) ?? 0 }
+    case .autoCleanupIntervalDays:
+        MangoSettingsStore.update { $0.autoCleanupIntervalDays = Int(trimmed) ?? 7 }
     }
 }
 
 private func mangoSettingsEntries(
     settings: MangoSettingsState,
     searchText: String,
-    keywordsText: String,
-    whitelistText: String
+    textValues: [MangoTextInputField: String]
 ) -> [MangoSettingsEntry] {
     var entries: [MangoSettingsEntry] = []
 
@@ -232,36 +228,142 @@ private func mangoSettingsEntries(
         return title.lowercased().contains(query)
     }
 
-    entries.append(.messagesHeader)
-    if include(.keywordAlertsEnabled(false)) { entries.append(.keywordAlertsEnabled(settings.keywordAlertsEnabled)) }
-    if settings.keywordAlertsEnabled && include(.keywordsInput("")) {
-        entries.append(.keywordsInput(keywordsText))
+    func add(_ entry: MangoSettingsEntry) {
+        if include(entry) {
+            entries.append(entry)
+        }
     }
-    if settings.keywordAlertsEnabled && include(.keywordMutedEnabled(false)) {
-        entries.append(.keywordMutedEnabled(settings.alertMutedChatsOnKeywordMatch))
+    func addHeader(_ id: Int32, _ s: MangoSettingsSection, _ text: String) {
+        entries.append(.header(id, s, text))
     }
-    if include(.sendConfirmationEnabled(false)) { entries.append(.sendConfirmationEnabled(settings.sendConfirmationEnabled)) }
-    if include(.antiRecallEnabled(false)) { entries.append(.antiRecallEnabled(settings.antiRecallEnabled)) }
-    entries.append(.messagesFooter)
-
-    entries.append(.adsHeader)
-    if include(.adBlockEnabled(false)) { entries.append(.adBlockEnabled(settings.adBlockEnabled)) }
-    if settings.adBlockEnabled && include(.adWhitelistInput("")) {
-        entries.append(.adWhitelistInput(whitelistText))
+    func addSwitch(_ id: Int32, _ s: MangoSettingsSection, _ title: String, _ value: Bool, _ keyPath: WritableKeyPath<MangoSettingsState, Bool>) {
+        add(.switchRow(id, s, title, value, keyPath))
     }
-    entries.append(.adsFooter)
+    func addText(_ id: Int32, _ s: MangoSettingsSection, _ title: String, _ placeholder: String, _ field: MangoTextInputField) {
+        add(.textRow(id, s, title, placeholder, textValues[field] ?? "", field))
+    }
+    func addAction(_ id: Int32, _ s: MangoSettingsSection, _ title: String, _ action: MangoSettingsAction) {
+        add(.actionRow(id, s, title, action))
+    }
+    func addFooter(_ id: Int32, _ s: MangoSettingsSection, _ text: String) {
+        entries.append(.footer(id, s, text))
+    }
 
-    entries.append(.mediaHeader)
-    if include(.autoCleanupEnabled(false)) { entries.append(.autoCleanupEnabled(settings.autoCleanupEnabled)) }
-    if include(.clearCacheNow) { entries.append(.clearCacheNow) }
-    entries.append(.mediaFooter)
+    // 聊天行为
+    addHeader(1, .chat, "聊天行为")
+    addSwitch(2, .chat, "关键词提醒", settings.keywordAlertsEnabled, \.keywordAlertsEnabled)
+    if settings.keywordAlertsEnabled {
+        addText(3, .chat, "关键词列表", "关键词，用逗号分隔", .keywords)
+        addSwitch(4, .chat, "静音会话也提醒", settings.alertMutedChatsOnKeywordMatch, \.alertMutedChatsOnKeywordMatch)
+    }
+    addSwitch(5, .chat, "发送前确认", settings.sendConfirmationEnabled, \.sendConfirmationEnabled)
+    addSwitch(6, .chat, "防撤回", settings.antiRecallEnabled, \.antiRecallEnabled)
+    addSwitch(7, .chat, "禁用双击表情", settings.disableDoubleTapReactions, \.disableDoubleTapReactions)
+    addSwitch(8, .chat, "展开引用", settings.expandQuotes, \.expandQuotes)
+    addSwitch(9, .chat, "展开剧透", settings.revealSpoilers, \.revealSpoilers)
+    addSwitch(10, .chat, "关闭发送提示音", settings.disableSentSound, \.disableSentSound)
+    addSwitch(11, .chat, "关闭接收提示音", settings.disableReceivedSound, \.disableReceivedSound)
+    addSwitch(12, .chat, "默认静音发送", settings.silentSendDefault, \.silentSendDefault)
+    addSwitch(13, .chat, "语音发送前确认", settings.confirmVoice, \.confirmVoice)
+    addSwitch(14, .chat, "机器人命令确认", settings.confirmBotCommand, \.confirmBotCommand)
+    addSwitch(15, .chat, "隐藏反应列表", settings.hideReactionList, \.hideReactionList)
+    addSwitch(16, .chat, "隐藏反应通知", settings.hideReactionNotifications, \.hideReactionNotifications)
+    addSwitch(17, .chat, "发送后收起键盘", settings.collapseKeyboardAfterSend, \.collapseKeyboardAfterSend)
+    addSwitch(18, .chat, "折叠消息菜单", settings.collapseMessageMenu, \.collapseMessageMenu)
+    addFooter(19, .chat, "关键词提醒会在收到含关键词的消息时强提醒；防撤回后对方撤回的消息仍保留在本机。")
 
-    entries.append(.proxyHeader)
-    if include(.hideProxyIcon(false)) { entries.append(.hideProxyIcon(settings.hideProxyIcon)) }
-    if include(.openProxySettings) { entries.append(.openProxySettings) }
+    // 隐私
+    addHeader(20, .privacy, "隐私")
+    addSwitch(21, .privacy, "隐藏在线状态", settings.hideOnlineStatus, \.hideOnlineStatus)
+    addSwitch(22, .privacy, "隐藏输入状态", settings.hideTypingStatus, \.hideTypingStatus)
+    addSwitch(23, .privacy, "隐藏已读状态", settings.hideReadStatus, \.hideReadStatus)
+    addSwitch(24, .privacy, "强制破解转发", settings.forceForward, \.forceForward)
+    addSwitch(25, .privacy, "无限置顶", settings.unlimitedPin, \.unlimitedPin)
+    addSwitch(26, .privacy, "显示未读聊天", settings.unreadDialogsTab, \.unreadDialogsTab)
+    addSwitch(27, .privacy, "隐藏 Stories", settings.hideStories, \.hideStories)
+    addSwitch(28, .privacy, "隐藏我的 Stories", settings.hideMyStories, \.hideMyStories)
+    addFooter(29, .privacy, "隐私类功能仅影响本机显示，不会修改服务器状态。")
 
-    entries.append(.aboutHeader)
-    entries.append(.aboutText)
+    // 关键词屏蔽
+    addHeader(30, .keywordFilter, "关键词屏蔽")
+    addSwitch(31, .keywordFilter, "启用关键词屏蔽", settings.keywordFilterEnabled, \.keywordFilterEnabled)
+    addSwitch(32, .keywordFilter, "云端违禁词更新", settings.keywordFilterRemoteUpdates, \.keywordFilterRemoteUpdates)
+    if settings.keywordFilterEnabled {
+        addText(33, .keywordFilter, "违禁词", "违禁词，用逗号分隔", .keywordFilterKeywords)
+        addText(34, .keywordFilter, "白名单", "白名单关键词，用逗号分隔", .keywordFilterWhitelist)
+    }
+    addFooter(35, .keywordFilter, "命中违禁词的消息会在本机隐藏；白名单命中则不屏蔽。")
+
+    // 自动回复
+    addHeader(36, .autoReply, "自动回复")
+    addSwitch(37, .autoReply, "启用自动回复", settings.autoReplyEnabled, \.autoReplyEnabled)
+    addSwitch(38, .autoReply, "任意消息都自动回复", settings.autoReplyAnyMessageEnabled, \.autoReplyAnyMessageEnabled)
+    if settings.autoReplyAnyMessageEnabled {
+        addText(39, .autoReply, "任意消息回复内容", "输入回复文字", .autoReplyAnyMessageText)
+    }
+    addFooter(40, .autoReply, "自动回复仅对私聊生效。关键词回复规则的精细管理将在后续版本补充。")
+
+    // 媒体
+    addHeader(41, .media, "媒体")
+    addSwitch(42, .media, "视频默认静音", settings.keepVideoMuted, \.keepVideoMuted)
+    addSwitch(43, .media, "隐藏贴纸时间", settings.hideStickerTime, \.hideStickerTime)
+    addText(44, .media, "下载速度", "留空为正常（1 倍）", .downloadSpeedBoost)
+    addText(45, .media, "上传速度", "留空为正常（1 倍）", .uploadSpeedBoost)
+    addText(46, .media, "自定义下载路径", "输入文件夹完整路径", .customDownloadPath)
+    addText(47, .media, "表情包显示大小", "百分比，默认 100", .stickerMessageSize)
+    addText(48, .media, "文字显示大小", "字号，留空为默认", .messageTextSize)
+    addSwitch(49, .media, "发送图片/视频默认最高质量", settings.defaultHighQualityMedia, \.defaultHighQualityMedia)
+    addSwitch(50, .media, "隐藏频道身份发送", settings.hideChannelSendAs, \.hideChannelSendAs)
+    addSwitch(51, .media, "自动清理缓存", settings.autoCleanupEnabled, \.autoCleanupEnabled)
+    if settings.autoCleanupEnabled {
+        addText(52, .media, "清理间隔天数", "默认 7 天", .autoCleanupIntervalDays)
+    }
+    addAction(53, .media, "立即清理缓存", .clearCacheNow)
+    addFooter(54, .media, "自动清理在应用启动时检查并清除过期媒体缓存，不影响聊天记录。")
+
+    // 自动化
+    addHeader(55, .automation, "自动化")
+    addSwitch(56, .automation, "自动已读", settings.autoRead, \.autoRead)
+    addSwitch(57, .automation, "自动已读随机回复", settings.autoReadRandomReply, \.autoReadRandomReply)
+    addSwitch(58, .automation, "群聊自动已读回复", settings.autoReadReplyGroups, \.autoReadReplyGroups)
+    addSwitch(59, .automation, "自动翻译消息", settings.autoTranslateMessages, \.autoTranslateMessages)
+    addSwitch(60, .automation, "出站消息自动翻译", settings.outgoingTranslationEnabled, \.outgoingTranslationEnabled)
+    addFooter(61, .automation, "自动翻译将消息翻译为中文；需系统翻译服务可用。")
+
+    // 外观
+    addHeader(62, .appearance, "外观")
+    addSwitch(63, .appearance, "隐藏代理图标", settings.hideProxyIcon, \.hideProxyIcon)
+    addSwitch(64, .appearance, "禁用下拉搜索", settings.disablePullDownSearch, \.disablePullDownSearch)
+    addText(65, .appearance, "输入栏文字", "输入要显示的提示文字", .inputBarText)
+    addText(66, .appearance, "会话页标题", "输入左上角显示的文字", .dialogsTitleText)
+    addText(67, .appearance, "软件名称", "输入新的软件名称", .appIdentityName)
+    addSwitch(68, .appearance, "本地会员状态", settings.localPremiumStatus, \.localPremiumStatus)
+    addText(69, .appearance, "状态表情", "输入状态表情", .localPremiumEmoji)
+    addText(70, .appearance, "自定义星星数量", "留空显示真实数量", .customStarBalance)
+    addFooter(71, .appearance, "外观类修改仅在本机显示。")
+
+    // 工具
+    addHeader(72, .tools, "工具")
+    addText(73, .tools, "代理订阅链接", "输入 https://example.com/proxy.txt", .proxySubscriptionSource)
+    addSwitch(74, .tools, "展开全部账号", settings.accountsExpand, \.accountsExpand)
+    addSwitch(75, .tools, "跨账号收件箱", settings.crossAccountInbox, \.crossAccountInbox)
+    addFooter(76, .tools, "代理订阅源支持定时拉取远程代理列表。")
+
+    // 独立模块
+    addHeader(77, .modules, "独立模块")
+    addSwitch(78, .modules, "诈骗用户警告", settings.scamUserWarningEnabled, \.scamUserWarningEnabled)
+    addSwitch(79, .modules, "大文件保护", settings.largeFileGuardEnabled, \.largeFileGuardEnabled)
+    addSwitch(80, .modules, "通知规则", settings.notificationRulesEnabled, \.notificationRulesEnabled)
+    addSwitch(81, .modules, "性能监控", settings.performanceMonitorEnabled, \.performanceMonitorEnabled)
+    addSwitch(82, .modules, "设置同步", settings.settingsSyncEnabled, \.settingsSyncEnabled)
+    addSwitch(83, .modules, "定时提醒", settings.messageReminderEnabled, \.messageReminderEnabled)
+    addSwitch(84, .modules, "置顶搜索频道", settings.pinnedSearchChannelsEnabled, \.pinnedSearchChannelsEnabled)
+    addSwitch(85, .modules, "自动加入频道", settings.autoJoinChannelsEnabled, \.autoJoinChannelsEnabled)
+    addFooter(86, .modules, "独立模块功能逐步接入中。")
+
+    // 关于
+    addHeader(87, .about, "关于")
+    entries.append(.footer(88, .about, "芒果客户端 iOS 版 · 基于 Telegram 源码\n功能与 Android 芒果客户端对齐"))
 
     return entries
 }
@@ -270,9 +372,8 @@ public func mangoSettingsController(context: AccountContext) -> ViewController {
     let settingsPromise = ValuePromise(MangoSettingsStore.shared, ignoreRepeated: true)
     let searchTextPromise = ValuePromise("", ignoreRepeated: true)
 
-    let initialSettings = MangoSettingsStore.shared
-    var keywordsText = initialSettings.keywords.joined(separator: ", ")
-    var whitelistText = initialSettings.adBlockWhitelistPeerIds.map { String($0) }.joined(separator: ", ")
+    var textValues = initialMangoTextValues(MangoSettingsStore.shared)
+    let textValuesPromise = ValuePromise(textValues, ignoreRepeated: true)
 
     var presentUndoImpl: ((UndoOverlayContent) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
@@ -285,41 +386,40 @@ public func mangoSettingsController(context: AccountContext) -> ViewController {
         updateSearch: { text in
             searchTextPromise.set(text)
         },
-        updateKeywordsText: { value in
-            keywordsText = value
-            let keywords = value.components(separatedBy: CharacterSet(charactersIn: ",，\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-            MangoSettingsStore.update { $0.keywords = keywords }
-        },
-        updateWhitelistText: { value in
-            whitelistText = value
-            let ids = value.components(separatedBy: CharacterSet(charactersIn: ",，\n")).compactMap { Int64($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            MangoSettingsStore.update { $0.adBlockWhitelistPeerIds = ids }
-        },
-        clearCacheNow: {
-            let categories: [StorageUsageStats.CategoryKey] = [.photos, .videos, .files, .music, .stickers, .avatars, .misc, .stories]
-            let _ = context.engine.resources.clearStorage(peerId: nil, categories: categories, includeMessages: [], excludeMessages: []).start()
-            MangoSettingsStore.update { $0.lastAutoCleanupTimestamp = Date().timeIntervalSince1970 }
+        updateText: { field, value in
+            textValues[field] = value
+            textValuesPromise.set(textValues)
+            applyMangoTextUpdate(field, value)
             settingsPromise.set(MangoSettingsStore.shared)
-            presentUndoImpl?(.info(title: nil, text: "缓存清理已开始", timeout: nil, customUndoText: nil))
         },
-        openProxySettings: {
-            pushImpl?(proxySettingsController(context: context))
+        performAction: { action in
+            switch action {
+            case .clearCacheNow:
+                let categories: [StorageUsageStats.CategoryKey] = [.photos, .videos, .files, .music, .stickers, .avatars, .misc, .stories]
+                let _ = context.engine.resources.clearStorage(peerId: nil, categories: categories, includeMessages: [], excludeMessages: []).start()
+                MangoSettingsStore.update { $0.lastAutoCleanupTimestamp = Date().timeIntervalSince1970 }
+                settingsPromise.set(MangoSettingsStore.shared)
+                presentUndoImpl?(.info(title: nil, text: "缓存清理已开始", timeout: nil, customUndoText: nil))
+            case .openProxySettings:
+                pushImpl?(proxySettingsController(context: context))
+            }
         }
     )
 
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         settingsPromise.get(),
-        searchTextPromise.get()
+        searchTextPromise.get(),
+        textValuesPromise.get()
     )
     |> deliverOnMainQueue
-    |> map { presentationData, settings, searchText -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, settings, searchText, textValues -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
         let updatedTheme = presentationData.theme.withModalBlocksBackground()
         presentationData = presentationData.withUpdated(theme: updatedTheme)
 
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("芒果设置"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: mangoSettingsEntries(settings: settings, searchText: searchText, keywordsText: keywordsText, whitelistText: whitelistText), style: .blocks, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: mangoSettingsEntries(settings: settings, searchText: searchText, textValues: textValues), style: .blocks, animateChanges: true)
 
         return (controllerState, (listState, arguments))
     }
