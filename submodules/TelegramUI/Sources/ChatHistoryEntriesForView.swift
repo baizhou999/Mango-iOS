@@ -12,6 +12,7 @@ import TextFormat
 import Markdown
 import Display
 import TelegramStringFormatting
+import MangoSettings
 
 struct ChatHistoryEntriesForViewState {
     private var messageStableIdToLocalId: [UInt32: Int64] = [:]
@@ -144,6 +145,11 @@ func chatHistoryEntriesForView(
     loop: for entry in view.entries {
         var message = entry.message.withAppliedEphemeralReplacementMessage()
         var isRead = entry.isRead
+        
+        // 关键词屏蔽：命中违禁词的消息在本机隐藏（白名单命中则不屏蔽）
+        if MangoKeywordFilter.shouldHide(text: message.text, chatType: chatPeer?.debugDisplayTitle ?? "") {
+            continue loop
+        }
         
         var pinToTop = false
         if message.stableId == pinToTopStableId {

@@ -59,6 +59,7 @@ import Markdown
 import TelegramPermissionsUI
 import Speak
 import TranslateUI
+import MangoSettings
 import UniversalMediaPlayer
 import WallpaperBackgroundNode
 import ChatListUI
@@ -2336,8 +2337,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, sendCurrentMessage: { [weak self] silentPosting, messageEffect in
             if let self {
-                if let _ = self.presentationInterfaceState.interfaceState.mediaDraftState {
-                    self.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
+                if let mediaDraftState = self.presentationInterfaceState.interfaceState.mediaDraftState {
+                    if case .audio = mediaDraftState, MangoSettingsStore.shared.confirmVoice {
+                        self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: "确认发送这条语音消息？", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: "发送", action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
+                        })]), in: .window(.root))
+                    } else {
+                        self.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
+                    }
                 } else {
                     self.chatDisplayNode.maybeSendEphemeralMessage(sendNormally: { [weak self] in
                         guard let self else {
@@ -3555,7 +3565,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if postAsReply, let messageId {
                     replyToMessageId = EngineMessageReplySubject(messageId: messageId, quote: nil, innerSubject: nil)
                 }
-                strongSelf.sendMessages([.message(text: command, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyToMessageId, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                let sendCommand = {
+                    strongSelf.sendMessages([.message(text: command, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyToMessageId, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                }
+                if MangoSettingsStore.shared.confirmBotCommand {
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: "确认发送这条机器人命令？", actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: "发送", action: {
+                        sendCommand()
+                    })]), in: .window(.root))
+                } else {
+                    sendCommand()
+                }
             }
         }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.effectiveNavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
@@ -6673,7 +6692,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.inputActivityDisposable = (self.typingActivityPromise.get()
             |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                 if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil && strongSelf.presentationInterfaceState.subject != .scheduledMessages && strongSelf.presentationInterfaceState.currentSendAsPeerId == nil {
-                    strongSelf.context.account.updateLocalInputActivity(peerId: activitySpace, activity: .typingText, isPresent: value)
+                    strongSelf.context.account.updateLocalInputActivity(peerId: activitySpace, activity: .typingText, isPresent: value && !MangoPrivacyStatus.hideTyping)
                 }
             })
         
@@ -8954,7 +8973,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
             
     func transformEnqueueMessages(_ messages: [EnqueueMessage], postpone: Bool = false) -> [EnqueueMessage] {
-        let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
+        let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting || MangoSettingsStore.shared.silentSendDefault
         return transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)
     }
     

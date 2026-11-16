@@ -30,6 +30,7 @@ import ChatListHeaderNoticeComponent
 import ChatListFilterTabContainerNode
 import GlassControls
 import SideColumnLayout
+import MangoSettings
 
 public enum ChatListContainerNodeFilter: Equatable {
     case all
@@ -2517,8 +2518,15 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
 }
 
 func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscriptions, isHidden: Bool) -> Bool {
+    let settings = MangoSettingsStore.shared
+    if settings.hideStories {
+        return false
+    }
     if !storySubscriptions.items.isEmpty {
         return true
+    }
+    if settings.hideMyStories {
+        return false
     }
     if !isHidden, let accountItem = storySubscriptions.accountItem {
         if accountItem.hasPending || accountItem.storyCount != 0 {

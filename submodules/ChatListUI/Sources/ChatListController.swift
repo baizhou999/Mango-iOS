@@ -1326,6 +1326,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         self.chatListDisplayNode.mainContainerNode.activateSearch = { [weak self] in
+            // 禁用会话列表下拉进入搜索
+            if MangoSettingsStore.shared.disablePullDownSearch {
+                return
+            }
             self?.activateSearch()
         }
         
@@ -7211,7 +7215,7 @@ private final class ChatListLocationContext {
         presentationData: PresentationData,
         storyPostingAvailable: Bool
     ) {
-        let defaultTitle: String
+        var defaultTitle: String
         switch location {
         case let .chatList(groupId):
             if groupId == .root {
@@ -7223,6 +7227,13 @@ private final class ChatListLocationContext {
             defaultTitle = ""
         case .savedMessagesChats:
             defaultTitle = ""
+        }
+        if case .chatList(.root) = self.location {
+            // 自定义会话列表标题文字（非空时覆盖默认标题）
+            let dialogsTitleText = MangoSettingsStore.shared.dialogsTitleText
+            if !dialogsTitleText.isEmpty {
+                defaultTitle = dialogsTitleText
+            }
         }
         let previousEditingAndNetworkState = self.previousEditingAndNetworkStateValue.swap((stateAndFilterId.state.editing, networkState))
         

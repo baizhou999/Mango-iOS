@@ -327,6 +327,58 @@ final class AuthorizedApplicationContext {
             }
 
             if let strongSelf = self, let (messages, _, notify, threadData) = messageList.last, let firstMessage = messages.first {
+                // 自动回复：收到新私聊/群聊消息时触发
+                let mangoSettings = MangoSettingsStore.shared
+                if mangoSettings.autoReplyEnabled, firstMessage.flags.contains(.Incoming), firstMessage.id.peerId != context.account.peerId {
+                    let peerId = firstMessage.id.peerId
+                    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                        var replyText: String?
+                        if mangoSettings.autoReplyAnyMessageEnabled {
+                            if !mangoSettings.autoReplyAnyMessageText.isEmpty {
+                                replyText = mangoSettings.autoReplyAnyMessageText
+                            }
+                        } else {
+                            for rule in mangoSettings.autoReplyRules {
+                                let keyword = rule.keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let matched = keyword.isEmpty || MangoKeywordMatcher.firstMatch(in: firstMessage.text, keywords: [rule.keyword]) != nil
+                                if matched, !rule.replyMessages.isEmpty {
+                                    replyText = rule.replyMessages.randomElement()
+                                    break
+                                }
+                            }
+                        }
+                        if let replyText, !replyText.isEmpty {
+                            let _ = context.engine.messages.enqueueOutgoingMessage(
+                                to: peerId,
+                                replyTo: nil,
+                                threadId: firstMessage.threadId,
+                                content: .text(replyText, [])
+                            ).start()
+                        }
+                    }
+                }
+
+                // 自动已读：收到消息自动标记已读
+                if MangoAutoRead.isEnabled, firstMessage.flags.contains(.Incoming), firstMessage.id.peerId != context.account.peerId {
+                    let _ = context.engine.messages.applyMaxReadIndexInteractively(index: firstMessage.index).start()
+
+                    // 自动已读后随机回复
+                    if MangoAutoRead.randomReplyEnabled {
+                        let isGroup = firstMessage.id.peerId.namespace == Namespaces.Peer.CloudGroup || firstMessage.id.peerId.namespace == Namespaces.Peer.CloudChannel
+                        if !MangoSettingsStore.shared.autoReadReplyGroups || isGroup {
+                            let replies = ["嗯嗯", "好的", "收到", "知道了", "哈哈"]
+                            if let replyText = replies.randomElement() {
+                                let _ = context.engine.messages.enqueueOutgoingMessage(
+                                    to: firstMessage.id.peerId,
+                                    replyTo: nil,
+                                    threadId: firstMessage.threadId,
+                                    content: .text(replyText, [])
+                                ).start()
+                            }
+                        }
+                    }
+                }
+
                 if UIApplication.shared.applicationState == .active {
                     let chatLocation: NavigateToChatControllerParams.Location
                     if let _ = threadData, let threadId = firstMessage.threadId {
@@ -397,7 +449,7 @@ final class AuthorizedApplicationContext {
                             if !isMuted || mangoKeywordHit {
                                 if firstMessage.id.peerId == context.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
                                 } else {
-                                    if inAppNotificationSettings.playSounds {
+                                    if inAppNotificationSettings.playSounds, !MangoSettingsStore.shared.disableReceivedSound {
                                         serviceSoundManager.playIncomingMessageSound()
                                     }
                                     if inAppNotificationSettings.vibrate {

@@ -99,6 +99,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageSuggestedPostInfoNode",
         "//submodules/TelegramUI/Components/PremiumAlertController",
         "//submodules/TelegramUI/Components/Chat/ChatMessageRichDataBubbleContentNode",
+        "//submodules/MangoSettings:MangoSettings",
     ],
     visibility = [
         "//visibility:public",

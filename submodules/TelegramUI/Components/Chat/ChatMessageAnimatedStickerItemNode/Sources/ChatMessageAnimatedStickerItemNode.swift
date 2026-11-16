@@ -18,6 +18,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import Emoji
 import Markdown
+import MangoSettings
 import ManagedAnimationNode
 import SlotMachineAnimationNode
 import UniversalMediaPlayer
@@ -852,6 +853,11 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 displaySize = CGSize(width: 240.0, height: 240.0)
                 imageVerticalInset = -20.0
                 imageHorizontalOffset = 12.0
+            }
+            let stickerSizePercent = MangoSettingsStore.shared.stickerMessageSize
+            if stickerSizePercent > 0 {
+                let stickerScale = CGFloat(stickerSizePercent) / 100.0
+                displaySize = CGSize(width: displaySize.width * stickerScale, height: displaySize.height * stickerScale)
             }
             
             var textLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments) -> TextNodeWithEntities)?
@@ -1697,7 +1703,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0 + imageBottomPadding), size: dateAndStatusSize)
                     animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     dateAndStatusApply(animation)
-                    if case .customChatContents = item.associatedData.subject {
+                    if case .customChatContents = item.associatedData.subject || MangoSettingsStore.shared.hideStickerTime {
                         strongSelf.dateAndStatusNode.isHidden = true
                     }
 

@@ -489,5 +489,22 @@ public enum MangoScamWarning {
 // MARK: - 大文件保护
 
 public enum MangoLargeFileGuard {
+    private static var bypassOnce = false
+
     public static var isEnabled: Bool { return MangoSettingsStore.shared.largeFileGuardEnabled }
+
+    public static func shouldConfirm() -> Bool {
+        guard isEnabled else {
+            return false
+        }
+        if bypassOnce {
+            bypassOnce = false
+            return false
+        }
+        return true
+    }
+
+    public static func bypassNextSend() {
+        bypassOnce = true
+    }
 }

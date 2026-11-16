@@ -1013,6 +1013,27 @@ extension ChatControllerImpl {
                 return
             }
 
+            if scheduleTime == nil && !postpone {
+                let hasLargeFile = messages.contains { message in
+                    if case let .message(_, _, _, mediaReference, _, _, _, _, _, _) = message, let file = mediaReference?.media as? TelegramMediaFile, let size = file.size, size >= 150 * 1024 * 1024 {
+                        return true
+                    }
+                    return false
+                }
+                if hasLargeFile && MangoLargeFileGuard.shouldConfirm() {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let alertController = textAlertController(context: strongSelf.context, title: nil, text: "发送的文件超过 150MB，确认继续发送？", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: "发送", action: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        MangoLargeFileGuard.bypassNextSend()
+                        strongSelf.chatDisplayNode.sendMessages(messages, silentPosting, scheduleTime, repeatPeriod, isAnyMessageTextPartitioned, postpone)
+                    })])
+                    strongSelf.present(alertController, in: .window(.root))
+                    return
+                }
+            }
+
             var correlationIds: [Int64] = []
             for message in messages {
                 switch message {
@@ -1025,6 +1046,10 @@ extension ChatControllerImpl {
                 }
             }
             strongSelf.commitPurposefulAction()
+            
+            if MangoSettingsStore.shared.collapseKeyboardAfterSend {
+                strongSelf.chatDisplayNode.collapseInput()
+            }
             
             if let peerId = strongSelf.chatLocation.peerId {
                 var hasDisabledContent = false
@@ -5173,7 +5198,7 @@ extension ChatControllerImpl {
                         return
                     }
                     let inAppNotificationSettings = self.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                    if inAppNotificationSettings.playSounds, let firstEvent = eventGroup.first, !firstEvent.isSilent {
+                    if inAppNotificationSettings.playSounds, let firstEvent = eventGroup.first, !firstEvent.isSilent, !MangoSettingsStore.shared.disableSentSound {
                         serviceSoundManager.playMessageDeliveredSound()
                     }
                     if self.presentationInterfaceState.subject != .scheduledMessages, let firstEvent = eventGroup.first, firstEvent.id.namespace == Namespaces.Message.ScheduledCloud {

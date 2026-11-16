@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 internal import TelegramApi
 import SwiftSignalKit
+import MangoSettings
 
 
 private enum PeerReadStateMarker: Equatable {
@@ -438,6 +439,11 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
     return keepsReadState
     |> mapToSignal { keepsReadState -> Signal<Never, PeerReadStateValidationError> in
         if !keepsReadState {
+            return confirmSynchronized(postbox: postbox, peerId: peerId)
+            |> ignoreValues
+        }
+        if push && MangoPrivacyStatus.hideRead {
+            // 隐藏已读回执：不向服务器推送已读状态，仅确认本地操作完成
             return confirmSynchronized(postbox: postbox, peerId: peerId)
             |> ignoreValues
         }

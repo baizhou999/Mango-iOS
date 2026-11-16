@@ -29,6 +29,7 @@ import InteractiveTextComponent
 import ShimmeringMask
 import StreamingTextReveal
 import WalletContext
+import MangoSettings
 
 private final class CachedChatMessageText {
     let text: String
@@ -117,7 +118,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var expandedBlockIds: Set<Int> = Set()
     private var appliedExpandedBlockIds: Set<Int>?
-    private var displayContentsUnderSpoilers: (value: Bool, location: CGPoint?) = (false, nil)
+    private var displayContentsUnderSpoilers: (value: Bool, location: CGPoint?) = (MangoSettingsStore.shared.revealSpoilers, nil)
     
     private var isSummaryApplied = false
 

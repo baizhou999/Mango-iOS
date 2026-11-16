@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
 import MergeLists
+import MangoSettings
 import Photos
 import PhotosUI
 import LegacyComponents
@@ -2405,9 +2406,9 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         }
         self.interaction?.displayLivePhotoIcon = displayLivePhotoIcon
         
-        let highQualityPhoto = UserDefaults.standard.bool(forKey: "TG_photoHighQuality_v0")
+        let highQualityPhoto = MangoSettingsStore.shared.defaultHighQualityMedia || UserDefaults.standard.bool(forKey: "TG_photoHighQuality_v0")
         if highQualityPhoto {
-            self.interaction?.editingState.setHighQualityPhoto(highQualityPhoto)
+            self.interaction?.editingState.setHighQualityPhoto(true)
         }
         
         self.interaction?.selectionState?.grouping = true

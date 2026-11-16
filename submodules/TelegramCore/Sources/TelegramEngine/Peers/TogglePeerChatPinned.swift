@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import MangoSettings
 
 public enum TogglePeerChatPinnedLocation {
     case group(PeerGroupId)
@@ -57,7 +58,7 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
             }
             
             let count = sameKind.count + additionalCount
-            if count > limitCount, itemIds.firstIndex(of: itemId) == nil {
+            if count > limitCount && !MangoUnlimitedPin.isEnabled, itemIds.firstIndex(of: itemId) == nil {
                 return .limitExceeded(count: sameKind.count, limit: limitCount)
             } else {
                 if let index = itemIds.firstIndex(of: itemId) {

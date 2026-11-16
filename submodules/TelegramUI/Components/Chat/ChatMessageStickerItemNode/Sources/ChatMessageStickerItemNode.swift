@@ -10,6 +10,7 @@ import AccountContext
 import StickerResources
 import ContextUI
 import Markdown
+import MangoSettings
 import ShimmerEffect
 import WallpaperBackgroundNode
 import ChatControllerInteraction
@@ -393,7 +394,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
     }
     
     override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: ChatMessageHeaderSpec) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
-        let displaySize = CGSize(width: 184.0, height: 184.0)
+        let stickerSizePercent = MangoSettingsStore.shared.stickerMessageSize
+        let stickerScale = stickerSizePercent > 0 ? CGFloat(stickerSizePercent) / 100.0 : 1.0
+        let displaySize = CGSize(width: 184.0 * stickerScale, height: 184.0 * stickerScale)
         let telegramFile = self.telegramFile
         let layoutConstants = self.layoutConstants
         let imageLayout = self.imageNode.asyncLayout()
@@ -1068,7 +1071,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     dateAndStatusApply(animation)
-                    if case .customChatContents = item.associatedData.subject {
+                    if case .customChatContents = item.associatedData.subject || MangoSettingsStore.shared.hideStickerTime {
                         strongSelf.dateAndStatusNode.isHidden = true
                     }
                     

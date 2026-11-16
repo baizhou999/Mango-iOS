@@ -34,6 +34,7 @@ import TextNodeWithEntities
 import RangeSet
 import GiftItemComponent
 import MediaResources
+import MangoSettings
 import UIKitRuntimeUtils
 
 private struct FetchControls {
@@ -3613,6 +3614,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 if let timecode = timecode {
                     context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
                     videoNode.playOnceWithSound(playAndRecord: false, seek: .timecode(timecode), actionAtEnd: actionAtEnd)
+                    if MangoSettingsStore.shared.keepVideoMuted {
+                        videoNode.setSoundEnabled(false)
+                    }
                 } else {
                     let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
                     |> take(1)
@@ -3630,10 +3634,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         }
                         if canPlay {
                             videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: actionAtEnd)
+                            if MangoSettingsStore.shared.keepVideoMuted {
+                                videoNode.setSoundEnabled(false)
+                            }
                         }
                     })
                 }
-            }, (self.playerStatus?.soundEnabled ?? false), false, false, self.badgeNode)
+            }, MangoSettingsStore.shared.keepVideoMuted ? false : (self.playerStatus?.soundEnabled ?? false), false, false, self.badgeNode)
         } else {
             return nil
         }

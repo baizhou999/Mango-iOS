@@ -18,6 +18,7 @@ import ChatMessageItemCommon
 import MessageInlineBlockBackgroundView
 import CheckNode
 import EmojiTextAttachmentView
+import MangoSettings
 
 public enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
@@ -149,7 +150,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     
     private var currentProgressDisposable: Disposable?
     
-    public var isQuoteExpanded: Bool = false
+    public var isQuoteExpanded: Bool = MangoSettingsStore.shared.expandQuotes
     
     override public init() {
         self.backgroundView = MessageInlineBlockBackgroundView(frame: CGRect())
@@ -189,7 +190,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMediaReference = maybeNode?.previousMediaReference
         
-        let isQuoteExpanded = maybeNode?.isQuoteExpanded ?? false
+        let isQuoteExpanded = maybeNode?.isQuoteExpanded ?? MangoSettingsStore.shared.expandQuotes
         
         return { arguments in
             let fontSize = floor(arguments.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)

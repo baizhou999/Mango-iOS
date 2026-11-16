@@ -31,6 +31,7 @@ import WalletContext
 import WalletConnectScreen
 import AlertUI
 import MetalEngine
+import MangoSettings
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -585,7 +586,8 @@ public final class AccountContextImpl: AccountContext {
             guard let self = self else {
                 return
             }
-            self.isPremium = isPremium
+            // 本地会员状态：强制界面显示为 Premium
+            self.isPremium = isPremium || MangoSettingsStore.shared.localPremiumStatus
             self.userLimits = userLimits
         })
         

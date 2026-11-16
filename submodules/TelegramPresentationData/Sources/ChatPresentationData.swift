@@ -3,6 +3,7 @@ import UIKit
 import Display
 import TelegramCore
 import TelegramUIPreferences
+import MangoSettings
 
 public final class ChatPresentationThemeData: Equatable {
     public let theme: PresentationTheme
@@ -53,7 +54,13 @@ public final class ChatPresentationData {
         self.largeEmoji = largeEmoji
         self.isPreview = isPreview
         
-        let baseFontSize = fontSize.baseDisplaySize
+        let systemBaseFontSize = fontSize.baseDisplaySize
+        let baseFontSize: CGFloat
+        if MangoSettingsStore.shared.messageTextSize > 0 {
+            baseFontSize = CGFloat(MangoSettingsStore.shared.messageTextSize)
+        } else {
+            baseFontSize = systemBaseFontSize
+        }
         self.messageFont = Font.regular(baseFontSize)
         self.messageEmojiFont = Font.regular(53.0)
         self.messageBoldFont = Font.bold(baseFontSize)

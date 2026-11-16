@@ -16,6 +16,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/TelegramCore",
+        "//submodules/MangoSettings:MangoSettings",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/MediaPlayer:UniversalMediaPlayer",

@@ -15,6 +15,7 @@ import EmojiStatusComponent
 import TelegramUIPreferences
 import TranslateUI
 import TelegramNotices
+import MangoSettings
 
 extension ChatControllerImpl {
     final class ContentData {
@@ -2234,11 +2235,11 @@ extension ChatControllerImpl {
                         if counterAndTimestamp.0 >= 3 {
                             maybeSuggestPremium = true
                         }
-                        if (isPremium || maybeSuggestPremium || hasAutoTranslate) && !isHidden {
+                        if (isPremium || maybeSuggestPremium || hasAutoTranslate || MangoAutoTranslate.isEnabled) && !isHidden {
                             return chatTranslationState(context: context, peerId: peerId, threadId: chatLocation.threadId)
                             |> map { translationState -> ChatPresentationTranslationState? in
                                 if let translationState, !translationState.fromLang.isEmpty && (translationState.fromLang != baseLanguageCode || translationState.isEnabled) {
-                                    return ChatPresentationTranslationState(isEnabled: translationState.isEnabled, fromLang: translationState.fromLang, toLang: translationState.toLang ?? baseLanguageCode)
+                                    return ChatPresentationTranslationState(isEnabled: translationState.isEnabled || MangoAutoTranslate.isEnabled, fromLang: translationState.fromLang, toLang: translationState.toLang ?? baseLanguageCode)
                                 } else {
                                     return nil
                                 }

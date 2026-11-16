@@ -40,6 +40,7 @@ swift_library(
         "//submodules/Pasteboard",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/ManagedAnimationNode",
+        "//submodules/MangoSettings:MangoSettings",
         "//submodules/TelegramUI/Components/EditableChatTextNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Components/LottieAnimationComponent",

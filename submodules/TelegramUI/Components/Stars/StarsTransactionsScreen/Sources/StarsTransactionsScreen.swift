@@ -26,6 +26,7 @@ import StarsWithdrawalScreen
 import PremiumDiamondComponent
 import StatisticsUI
 import EdgeEffect
+import MangoSettings
 
 private let initialSubscriptionsDisplayedLimit: Int32 = 3
 
@@ -750,6 +751,9 @@ final class StarsTransactionsScreenComponent: Component {
             }
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            // 自定义星星余额（>=0 时覆盖显示的 Stars 余额）
+            let mangoStarBalance = MangoSettingsStore.shared.customStarBalance
+            let displayBalance = mangoStarBalance >= 0 ? StarsAmount(value: Int64(mangoStarBalance), nanos: 0) : (self.starsState?.balance ?? StarsAmount.zero)
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
                 component: AnyComponent(ListSectionComponent(
@@ -779,7 +783,7 @@ final class StarsTransactionsScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
-                            count: self.starsState?.balance ?? StarsAmount.zero,
+                            count: displayBalance,
                             currency: component.starsContext.ton ? .ton : .stars,
                             rate: nil,
                             actionTitle: component.starsContext.ton ? environment.strings.Ton_WithdrawViaFragment : (withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy),

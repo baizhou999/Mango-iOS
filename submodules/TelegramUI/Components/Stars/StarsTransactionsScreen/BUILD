@@ -22,6 +22,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",
         "//submodules/AppBundle",
+        "//submodules/MangoSettings:MangoSettings",
         "//submodules/ItemListUI",
         "//submodules/TelegramStringFormatting",
         "//submodules/PresentationDataUtils",

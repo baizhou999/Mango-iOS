@@ -60,6 +60,7 @@ import ChatInputContextPanelNode
 import RasterizedCompositionComponent
 import RichTextEditorUIKit
 import RichTextEditorCore
+import MangoSettings
 
 /// The chat composer's inline custom-emoji view already exposes `dynamicColor` (forwarding to its backing
 /// `InlineStickerItemLayer`), so it satisfies the editor's emoji-view contract as-is. Declared here (the one
@@ -1439,7 +1440,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         var hasSendAsButton = false
-        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil {
+        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil && !MangoSettingsStore.shared.hideChannelSendAs {
             hasSendAsButton = true
         }
         
@@ -1824,7 +1825,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         
         var displaySendAsAvatarButton = false
         let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState
-        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil {
+        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil && !MangoSettingsStore.shared.hideChannelSendAs {
             menuButtonExpanded = false
             displaySendAsAvatarButton = true
             
@@ -2204,6 +2205,12 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             
             if let customPlaceholder = self.customPlaceholder {
                 updatedPlaceholder = customPlaceholder
+            }
+            
+            // 自定义聊天输入栏占位文字（非空时覆盖默认 placeholder）
+            let mangoInputBarText = MangoSettingsStore.shared.inputBarText
+            if !mangoInputBarText.isEmpty {
+                updatedPlaceholder = mangoInputBarText
             }
             
             var sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil
@@ -3189,7 +3196,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         }
         
         var hasSendAsButton = false
-        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil {
+        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil && !MangoSettingsStore.shared.hideChannelSendAs {
             hasSendAsButton = true
         }
         
@@ -5874,7 +5881,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
             return
         }
         
-        if let sendAsPeers = presentationInterfaceState.sendAsPeers, !sendAsPeers.isEmpty {
+        if let sendAsPeers = presentationInterfaceState.sendAsPeers, !sendAsPeers.isEmpty && !MangoSettingsStore.shared.hideChannelSendAs {
             self.interfaceInteraction?.updateShowSendAsPeers { value in
                 return !value
             }
