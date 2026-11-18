@@ -1071,7 +1071,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     dateAndStatusApply(animation)
-                    if case .customChatContents = item.associatedData.subject || MangoSettingsStore.shared.hideStickerTime {
+                    if MangoSettingsStore.shared.hideStickerTime {
+                        strongSelf.dateAndStatusNode.isHidden = true
+                    } else if case .customChatContents = item.associatedData.subject {
                         strongSelf.dateAndStatusNode.isHidden = true
                     }
                     
