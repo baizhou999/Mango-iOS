@@ -78,6 +78,18 @@ def main():
         xml = xml.replace(OLD_BUNDLE_ID, NEW_BUNDLE_ID)
         data = plistlib.loads(xml.encode("utf-8"))
         data["ExpirationDate"] = new_expiration
+        # 自签兼容：只保留免费个人账号可授予的最小 entitlement 集合，
+        # 去掉 iCloud / Apple Pay / CarPlay / 关联域名 / Siri / VoIP 推送等企业级权限，
+        # 避免第三方重签工具保留这些无效权限导致 iOS 启动即杀（白屏）。
+        entitlements = data.get("Entitlements", {})
+        data["Entitlements"] = {
+            "application-identifier": entitlements.get("application-identifier", ""),
+            "com.apple.developer.team-identifier": entitlements.get("com.apple.developer.team-identifier", ""),
+            "keychain-access-groups": entitlements.get("keychain-access-groups", []),
+            "com.apple.security.application-groups": entitlements.get("com.apple.security.application-groups", []),
+            "aps-environment": "development",
+            "get-task-allow": True,
+        }
         tmp = tempfile.mktemp(suffix=".plist")
         with open(tmp, "wb") as f:
             plistlib.dump(data, f, fmt=plistlib.FMT_XML)
